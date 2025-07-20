@@ -1,0 +1,31 @@
+{
+  "name": "hack-my-leave",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/energizer91/hack-my-leave.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/energizer91/hack-my-leave/issues"
+  },
+  "homepage": "https://github.com/energizer91/hack-my-leave#readme",
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13"
+  }
+}
