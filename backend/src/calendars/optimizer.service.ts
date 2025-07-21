@@ -3,11 +3,38 @@ import { HolidaysService } from './holidays.service';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import minMax from 'dayjs/plugin/minMax';
 import { VacationSuggestion } from './types';
-import { formatName } from './utils/format-name';
+import Holidays from 'date-holidays';
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+dayjs.extend(minMax);
+
+function rankVacationSegment(
+  vacationDays: dayjs.Dayjs[],
+  holidayDays: Set<string>,
+): 'strong' | 'weak' {
+  let score = 0;
+
+  for (const d of vacationDays) {
+    const prev = d.subtract(1, 'day').format('YYYY-MM-DD');
+    const next = d.add(1, 'day').format('YYYY-MM-DD');
+    const date = d.format('YYYY-MM-DD');
+
+    const nearHoliday =
+      holidayDays.has(prev) || holidayDays.has(next) || holidayDays.has(date);
+    const nearWeekend = d.day() === 1 || d.day() === 5;
+
+    if (nearHoliday) score += 2;
+    else if (nearWeekend) score += 1;
+    else score -= 1; // в центре недели, бесполезный
+  }
+
+  // Если в среднем хотя бы 1 балл на день — считаем отпуск ценным
+  const avgScore = score / vacationDays.length;
+  return avgScore >= 1 ? 'strong' : 'weak';
+}
 
 @Injectable()
 export class OptimizerService {
@@ -18,10 +45,13 @@ export class OptimizerService {
     countryCode: string,
     vacationDays: number,
   ) {
-    const holidays = await this.holidaysService.getPublicHolidays(
-      year,
-      countryCode,
-    );
+    // produces more potential vacations
+    const countryHolidays = new Holidays(countryCode);
+    const holidays = countryHolidays.getHolidays(year);
+    // const holidays = await this.holidaysService.getPublicHolidays(
+    //   year,
+    //   countryCode,
+    // );
 
     const suggestions: VacationSuggestion[] = [];
     const vacationsUsed = new Set<string>();
@@ -43,7 +73,7 @@ export class OptimizerService {
       const right = day.endOf('week').diff(day, 'days') - 1; // -saturday
 
       const possibleVacationsLeft = Array.from({ length: left })
-        .map((_, d) => day.subtract(d + 1, 'days'))
+        .map((_, d) => day.startOf('week').add(d + 1, 'days'))
         .filter((d) => d.isSameOrAfter(startOfYear, 'days')) // don't go before the current year
         .filter((d) => !vacationsUsed.has(d.format('YYYY-MM-DD')))
         .filter((d) => !holidaysSet.has(d.format('YYYY-MM-DD')));
@@ -57,51 +87,59 @@ export class OptimizerService {
       if (!possibleVacationsRight.length && !possibleVacationsLeft.length)
         continue;
 
-      let strong: dayjs.Dayjs[] = [];
-      let weak: dayjs.Dayjs[] = [];
+      const vacationCandidates: dayjs.Dayjs[][] = [];
 
-      if (possibleVacationsLeft.length && possibleVacationsRight.length) {
-        if (possibleVacationsLeft.length <= possibleVacationsRight.length) {
-          strong = possibleVacationsLeft;
-          weak = possibleVacationsRight;
-        } else {
-          strong = possibleVacationsRight;
-          weak = possibleVacationsLeft;
-        }
-      } else if (possibleVacationsLeft.length) {
-        strong = possibleVacationsLeft;
-      } else if (possibleVacationsRight.length) {
-        strong = possibleVacationsRight;
+      if (possibleVacationsLeft.length)
+        vacationCandidates.push(possibleVacationsLeft);
+
+      if (possibleVacationsRight.length)
+        vacationCandidates.push(possibleVacationsRight);
+
+      // scores
+      const withScores = Object.fromEntries(
+        vacationCandidates.map((vacationDays) => [
+          rankVacationSegment(vacationDays, holidaysSet),
+          vacationDays.map((d) => d.format('YYYY-MM-DD')),
+        ]),
+      ) as Record<'strong' | 'weak', string[]>;
+
+      let formattedStrong = withScores.strong ?? [];
+      let formattedWeak = withScores.weak ?? [];
+      const totalVacations = formattedStrong.concat(formattedWeak);
+
+      if (vacationsUsed.size + formattedWeak.length > vacationDays) {
+        console.log('potentially more than possible weak');
+        // formattedWeak = [];
       }
 
-      const formattedStrongVacations = strong.map((d) =>
-        d.format('YYYY-MM-DD'),
-      );
+      if (vacationsUsed.size + formattedStrong.length > vacationDays) {
+        console.log('potentially more than possible strong');
+        // formattedStrong = [];
+      }
 
-      const formattedWeakVacations = weak.map((d) => d.format('YYYY-MM-DD'));
+      if (formattedWeak.length + formattedStrong.length === 0) continue;
 
-      formattedStrongVacations.forEach((d) => vacationsUsed.add(d));
-      formattedWeakVacations.forEach((d) => vacationsUsed.add(d));
+      totalVacations.forEach((d) => vacationsUsed.add(d));
+
+      const allDays = [holiday.date, ...totalVacations].map((d) => dayjs(d));
+      const vacationDaysUsed = totalVacations.length;
+      const allCalendarDays =
+        dayjs.max(allDays)!.diff(dayjs.min(allDays)!, 'days') + 1;
+      const efficiency =
+        vacationDaysUsed > 0 ? allCalendarDays / vacationDaysUsed : 0;
 
       // added guaranteed strong vacations
       suggestions.push({
-        start: day.format('YYYY-MM-DD'),
-        name: formatName(holiday),
-        end: dayjs(formattedStrongVacations.at(-1)).format('YYYY-MM-DD'),
-        power: 'strong',
-        vacationUsed: formattedStrongVacations,
+        start: dayjs.min(allDays)!.format('YYYY-MM-DD'),
+        end: dayjs.max(allDays)!.format('YYYY-MM-DD'),
+        name: holiday.name,
+        classifiedVacations: {
+          strong: formattedStrong,
+          weak: formattedWeak,
+        },
+        efficiency,
+        vacationUsed: totalVacations,
       });
-
-      if (weak.length) {
-        // added weak vacations which then can be filtered to match the vacation days count
-        suggestions.push({
-          start: day.format('YYYY-MM-DD'),
-          name: formatName(holiday),
-          end: dayjs(formattedWeakVacations.at(-1)).format('YYYY-MM-DD'),
-          power: 'weak',
-          vacationUsed: formattedWeakVacations,
-        });
-      }
     }
 
     const remainingVacationDays = vacationDays - vacationsUsed.size;

@@ -23,6 +23,10 @@ export interface VacationSuggestion {
   start: string;
   end: string;
   name: string;
-  power: 'strong' | 'weak';
+  classifiedVacations: {
+    strong: string[];
+    weak: string[];
+  };
+  efficiency: number;
   vacationUsed: string[];
 }
