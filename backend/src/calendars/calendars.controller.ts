@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { CalendarsService } from './calendars.service';
 import { HolidaysService } from './holidays.service';
 import { OptimizerService } from './optimizer.service';
+import { STRATEGY_TYPE } from './types';
 
 @Controller('calendars')
 export class CalendarsController {
@@ -37,15 +38,17 @@ export class CalendarsController {
   }
 
   @Get('optimize')
-  async optimize(
+  optimize(
     @Query('year') year: string,
     @Query('country') country: string,
     @Query('days') days: string,
+    @Query('strategy') strategy: STRATEGY_TYPE,
   ) {
     return this.optimizerService.getOptimizedVacations(
       parseInt(year, 10),
       country.toUpperCase(),
       parseInt(days, 10),
+      strategy,
     );
   }
 }

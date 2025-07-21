@@ -20,13 +20,30 @@ export interface Holiday {
 }
 
 export interface VacationSuggestion {
+  id: string;
   start: string;
   end: string;
   name: string;
-  classifiedVacations: {
-    strong: string[];
-    weak: string[];
-  };
-  efficiency: number;
-  vacationUsed: string[];
+  vacations: string[];
+  score: number;
+}
+
+export interface StrategyResult {
+  result: VacationSuggestion[];
+  remainingVacationDays: number;
+}
+
+export enum STRATEGY_TYPE {
+  OPTIMAL,
+  AGGRESSIVE,
+  STRAIGHT,
+}
+
+export interface Strategy {
+  name: string;
+  description: string;
+  apply: (
+    suggestions: VacationSuggestion[],
+    vacationDays: number,
+  ) => StrategyResult;
 }
