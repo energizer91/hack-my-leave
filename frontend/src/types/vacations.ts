@@ -1,6 +1,6 @@
 export interface VacationFormData {
-  availableDays: string;
-  year: string;
+  availableDays: number;
+  year: number;
   country: string;
 }
 
@@ -8,7 +8,7 @@ export interface VacationSuggestion {
   start: string;
   end: string;
   name: string;
-  power: "strong" | "weak";
+  power: 'strong' | 'weak';
   vacationUsed: string[];
 }
 
