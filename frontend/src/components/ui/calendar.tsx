@@ -33,11 +33,6 @@ function Calendar({
         formatMonthDropdown: (date) => date.toLocaleString('default', { month: 'short' }),
         ...formatters,
       }}
-      modifiersClassNames={{
-        holiday: cn('bg-lime-200'),
-        weekend: cn('bg-lime-200'),
-        pto: cn('bg-violet-200'),
-      }}
       classNames={{
         root: cn('w-fit', defaultClassNames.root),
         months: cn('flex gap-4 flex-col md:flex-row relative', defaultClassNames.months),

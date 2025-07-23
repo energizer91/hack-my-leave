@@ -1,0 +1,114 @@
+/* Grid layout */
+.calendarGrid {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  max-width: 950px;
+}
+
+@media (min-width: 640px) {
+  .calendarGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendarGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.monthCard {
+  margin: 0 auto;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.calendarSvg {
+  height: auto;
+  display: block;
+}
+
+/* SVG text styles */
+.monthTitle {
+  font-size: 14px;
+  font-weight: 600;
+  fill: #1f2937;
+}
+
+.holidayText {
+  font-size: 12px;
+  fill: #6b7280;
+}
+
+.dayText {
+  font-size: 14px;
+}
+
+.weekdayText {
+  font-size: 12px;
+  fill: #6b7280;
+}
+
+/* Calendar cell interactions */
+.calendarCell {
+  transition: filter 0.2s ease;
+}
+
+.calendarCell:hover {
+  filter: brightness(1.1);
+}
+
+.calendarCellPointer {
+  cursor: pointer;
+}
+
+.calendarCellDefault {
+  cursor: default;
+}
+
+.dayTextNoPointer {
+  pointer-events: none;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  background-color: white;
+  color: hsl(var(--popover-foreground));
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  padding: 6px 12px;
+  font-size: 14px;
+  pointer-events: none;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  margin: 0;
+}
+
+.tooltipType {
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+  margin-top: 2px;
+}

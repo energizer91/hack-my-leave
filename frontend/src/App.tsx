@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { VacationForm } from './components/VacationForm';
-import { CalendarView } from './components/CalendarView';
 import type { VacationFormData } from './types/vacations';
 import { useCalendar } from './hooks/useCalendar';
 import { VacationSummary } from '@/components/VacationSummary';
+import { Legend } from '@/components/Legend.tsx';
+import { VirtualCalendarView } from '@/components/VirtualCalendarView';
 
 import './index.css';
 
@@ -38,11 +39,15 @@ function App() {
         </div>
       </div>
       {data && (
-        <CalendarView
-          suggestions={data?.suggestions}
-          holidays={data?.holidays}
-          year={params?.year}
-        />
+        <div className="flex flex-col items-center mt-16">
+          <h2 className="text-4xl font-bold mb-6">Your result</h2>
+          <Legend />
+          <VirtualCalendarView
+            suggestions={data?.suggestions}
+            holidays={data?.holidays}
+            year={params?.year}
+          />
+        </div>
       )}
     </div>
   );
