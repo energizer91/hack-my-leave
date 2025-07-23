@@ -1,0 +1,86 @@
+.yearCalendarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.cardHeader {
+  text-align: center;
+}
+
+.monthTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.holidaysText {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.monthCalendar {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* 🎯 Убираем отступы у самого календаря */
+.monthCalendar > * {
+  padding: 1rem;
+}
+
+.monthCalendar table {
+  width: 100%;
+  margin: 0;
+}
+
+/* 🎨 Адаптивность */
+@media (max-width: 768px) {
+  .yearCalendarGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0.5rem 0;
+  }
+
+  .cardHeader {
+    padding: 0.75rem 1rem 0.5rem 1rem;
+  }
+
+  .monthTitle {
+    font-size: 1.125rem;
+  }
+
+  .holidaysText {
+    font-size: 0.8rem;
+  }
+}
+
+/* 🎨 Дополнительные стили для календаря внутри card */
+.monthCalendar [role='grid'] {
+  border-collapse: collapse;
+}
+
+.monthCalendar td {
+  border: none;
+  & button {
+    border-radius: 0;
+  }
+}
+
+/* 🔧 Обеспечиваем чистый дизайн */
+.monthCalendar .rdp {
+  margin: 0;
+}
+
+.monthCalendar .rdp-table {
+  max-width: 100%;
+}

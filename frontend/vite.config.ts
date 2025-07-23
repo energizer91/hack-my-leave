@@ -10,6 +10,11 @@ export default defineConfig({
     // Tailwind CSS plugin
     tailwindcss(),
   ],
+  css: {
+    modules: {
+      localsConvention: 'camelCase',
+    },
+  },
   server: {
     proxy: {
       // proxies for API requests

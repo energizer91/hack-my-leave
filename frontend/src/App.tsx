@@ -1,32 +1,49 @@
 import { useState } from 'react';
-import './index.css';
-import VacationForm from './components/VacationForm';
-import { BestOptionCard } from './components/BestOptionCardTest';
-import CalendarView from './components/CalendarView';
+import { VacationForm } from './components/VacationForm';
+import { CalendarView } from './components/CalendarView';
 import type { VacationFormData } from './types/vacations';
 import { useCalendar } from './hooks/useCalendar';
+import { VacationSummary } from '@/components/VacationSummary';
+
+import './index.css';
 
 function App() {
   const [params, setParams] = useState<VacationFormData | null>(null);
-  const { isLoading, error, data } = useCalendar(params);
+  const { data } = useCalendar(params);
+
+  const handleSubmit = (formData: VacationFormData) => {
+    setParams({
+      year: formData.year,
+      country: formData.country,
+      availableDays: formData.availableDays,
+      strategy: formData.strategy,
+    });
+  };
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 40 }}>
-      <h1>Hack My Leave</h1>
-      <div style={{ display: 'flex', gap: 32 }}>
-        <div style={{ flex: 1 }}>
-          <VacationForm onSubmit={setParams} />
+    <div className="max-w-7xl mx-auto p-10">
+      <h1 className="text-3xl font-bold mb-8">Hack My Leave</h1>
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-1/3">
+          <VacationForm onSubmit={handleSubmit} />
         </div>
-        <div style={{ flex: 2 }}>
-          {isLoading && 'Loading...'}
-          {error && error.message}
-          <BestOptionCard data={data} />
-          <CalendarView highlights={data ? data.suggestions : []} />
+        <div className="w-full lg:w-2/3">
+          {data && (
+            <VacationSummary
+              suggestions={data.suggestions}
+              holidays={data.holidays}
+              totalVacationDays={params?.availableDays}
+            />
+          )}
         </div>
       </div>
-      <div className="p-4 bg-blue-100">
-        <h1 className="text-3xl font-bold underline">Hello world!</h1>
-      </div>
+      {data && (
+        <CalendarView
+          suggestions={data?.suggestions}
+          holidays={data?.holidays}
+          year={params?.year}
+        />
+      )}
     </div>
   );
 }

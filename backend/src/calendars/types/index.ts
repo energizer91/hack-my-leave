@@ -23,6 +23,7 @@ export interface VacationSuggestion {
   id: string;
   start: string;
   end: string;
+  date: string;
   name: string;
   vacations: string[];
   score: number;
@@ -34,14 +35,31 @@ export interface StrategyResult {
 }
 
 export enum STRATEGY_TYPE {
-  OPTIMAL,
-  AGGRESSIVE,
-  STRAIGHT,
+  OPTIMAL = 'OPTIMAL',
+  AGGRESSIVE = 'AGGRESSIVE',
+  SEASONAL = 'SEASONAL',
+  STRAIGHT = 'STRAIGHT',
+  BALANCED = 'BALANCED',
+  SMART = 'SMART',
+  LONG_VACATIONS = 'LONG_VACATIONS',
+}
+
+// Интерфейс для весов ранжирования
+interface RankingWeights {
+  efficiency: number;
+  duration: number;
+  seasonality: number;
+  clustering: number;
+  weekPosition: number;
+  monthBalance: number;
+  holidayProximity: number;
 }
 
 export interface Strategy {
   name: string;
   description: string;
+  rankingWeights: RankingWeights;
+  selectionPriority: 'score' | 'efficiency' | 'duration' | 'balanced' | 'smart';
   apply: (
     suggestions: VacationSuggestion[],
     vacationDays: number,

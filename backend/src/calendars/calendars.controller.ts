@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  HttpException,
+  HttpStatus,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { CalendarsService } from './calendars.service';
 import { HolidaysService } from './holidays.service';
 import { OptimizerService } from './optimizer.service';
@@ -31,7 +40,10 @@ export class CalendarsController {
     const countryCode = country?.toUpperCase();
 
     if (!y || !countryCode) {
-      return { error: 'Missing or invalid year/country' };
+      throw new HttpException(
+        'Missing or invalid year/country',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     return this.holidaysService.getPublicHolidays(y, countryCode);
@@ -39,16 +51,29 @@ export class CalendarsController {
 
   @Get('optimize')
   optimize(
-    @Query('year') year: string,
+    @Query('year', ParseIntPipe) year: number,
     @Query('country') country: string,
-    @Query('days') days: string,
-    @Query('strategy') strategy: STRATEGY_TYPE,
+    @Query('days', ParseIntPipe) days: number,
+    @Query('strategy') strategy = STRATEGY_TYPE.OPTIMAL,
   ) {
+    if (!country) {
+      throw new HttpException('Missing country code', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!(strategy in STRATEGY_TYPE)) {
+      throw new HttpException('Invalid strategy', HttpStatus.BAD_REQUEST);
+    }
+
     return this.optimizerService.getOptimizedVacations(
-      parseInt(year, 10),
+      year,
       country.toUpperCase(),
-      parseInt(days, 10),
+      days,
       strategy,
     );
+  }
+
+  @Get('strategies')
+  strategies() {
+    return this.optimizerService.getStrategies();
   }
 }
