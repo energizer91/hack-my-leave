@@ -14,7 +14,9 @@ export const Header = () => {
 
   return (
     <header className="mb-4 flex flex-row items-center gap-6">
-      <img width="63px" height="63px" src={logo} alt="logo" />
+      <Link to="/">
+        <img width="63px" height="63px" src={logo} alt="logo" />
+      </Link>
       <nav className="flex gap-1">
         {navItems.map((item) => (
           <Link
