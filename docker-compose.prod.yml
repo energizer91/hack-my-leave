@@ -3,14 +3,13 @@ version: '3.8'
 services:
   nginx:
     build:
-      context: .
-      dockerfile: proxy/Dockerfile.prod
+      context: ./proxy
+      dockerfile: Dockerfile.prod
     ports:
       - "443:443"
       - "80:80"
     volumes:
-      - /etc/letsencrypt/live/hackmyleave.com:/etc/nginx/certs:ro
-      - /etc/letsencrypt/archive/hackmyleave.com:/etc/nginx/archive:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
