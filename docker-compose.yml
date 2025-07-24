@@ -1,33 +1,40 @@
 version: '3.8'
 services:
-  mongodb:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
   backend:
-    build: ./backend
-    ports:
-      - "5000:3000"
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/mvp
-    depends_on:
-      - mongodb
-    volumes:
-      - ./backend:/app
-    working_dir: /app
+    build:
+      context: ./
+      dockerfile: backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    networks:
+      - app_network
 
   frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
+    build:
+      context: ./
+      dockerfile: frontend.Dockerfile
+    restart: unless-stopped
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-    working_dir: /app
+    networks:
+      - app_network
 
-volumes:
-  mongo-data:
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3050:3050"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app_network
+    volumes:
+      - ./proxy/logs:/var/log/nginx
+
+networks:
+  app_network:
+    driver: bridge

@@ -5,7 +5,9 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:all": "npm run build:backend && npm run build:frontend"
   },
   "workspaces": [
     "frontend",
@@ -26,6 +28,7 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
+    "date-holidays": "^3.24.4",
     "dayjs": "^1.11.13"
   }
 }
