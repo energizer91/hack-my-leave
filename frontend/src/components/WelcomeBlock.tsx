@@ -5,6 +5,7 @@ import type { VacationFormData, VacationResult } from '@/types/vacations.ts';
 import { WelcomePlaceholder } from '@/components/WelcomePlaceholder.tsx';
 
 interface WelcomeBlockProps {
+  ready?: boolean;
   isLoading?: boolean;
   data?: VacationResult;
   availableDays?: number;
@@ -12,6 +13,7 @@ interface WelcomeBlockProps {
 }
 
 export const WelcomeBlock = ({
+  ready = false,
   isLoading = false,
   data,
   availableDays,
@@ -20,7 +22,7 @@ export const WelcomeBlock = ({
   <Card>
     <CardContent className="flex flex-col lg:flex-row gap-8 items-center">
       <div className="w-full lg:w-1/3">
-        <VacationForm onSubmit={onSubmit} />
+        <VacationForm isLoading={isLoading || ready} onSubmit={onSubmit} />
       </div>
       <div className="w-full lg:w-2/3">
         {!isLoading && data ? (

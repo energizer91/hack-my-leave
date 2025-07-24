@@ -1,0 +1,14 @@
+FROM nginx:alpine
+
+RUN apk add --no-cache openssl
+
+COPY nginx.prod.conf /etc/nginx/nginx.conf
+
+RUN mkdir -p /etc/nginx/certs /var/log/nginx
+
+RUN chown -R nginx:nginx /var/log/nginx
+RUN chmod 755 /etc/nginx/certs
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]

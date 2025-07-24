@@ -42,13 +42,14 @@ export const CountrySelect = ({ country, onChange }: CountrySelectorProps) => {
         <Button
           variant="outline"
           role="combobox"
+          size="lg"
           aria-expanded={open}
           disabled={isLoading}
-          className="w-[200px] justify-between"
+          className="justify-between text-xl"
         >
           {country
             ? countries.find((framework) => framework.value === country)?.label
-            : 'Select...'}
+            : 'Country...'}
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
