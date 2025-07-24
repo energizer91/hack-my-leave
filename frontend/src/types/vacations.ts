@@ -3,7 +3,6 @@ import type { HolidaysTypes } from 'date-holidays';
 export interface VacationFormData {
   availableDays: number;
   year: number;
-  country: string;
   strategy: string;
 }
 

@@ -8,7 +8,6 @@ interface LegendItem {
 
 interface LegendProps {
   items?: LegendItem[];
-  orientation?: 'horizontal' | 'vertical';
 }
 
 const defaultItems = [
@@ -17,13 +16,10 @@ const defaultItems = [
   { label: 'Public holidays', color: 'var(--color-red-200)' },
 ];
 
-export const Legend: React.FC<LegendProps> = ({
-  items = defaultItems,
-  orientation = 'horizontal',
-}) => {
+export const Legend: React.FC<LegendProps> = ({ items = defaultItems }) => {
   return (
     <figure
-      className={`mb-6 ${orientation === 'horizontal' ? 'flex flex-wrap gap-6' : 'space-y-3'}`}
+      className="mb-6 flex flex-wrap gap-6 gap-y-2 justify-center items-center"
       aria-label="Calendar legend showing different types of days"
     >
       <figcaption className="sr-only">

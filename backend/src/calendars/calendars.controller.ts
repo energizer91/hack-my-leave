@@ -12,6 +12,7 @@ import { CalendarsService } from './calendars.service';
 import { HolidaysService } from './holidays.service';
 import { OptimizerService } from './optimizer.service';
 import { STRATEGY_TYPE } from './types';
+import { Lang } from 'src/common/lang.decorator';
 
 @Controller('calendars')
 export class CalendarsController {
@@ -32,7 +33,8 @@ export class CalendarsController {
   }
 
   @Get('holidays')
-  async getHolidays(
+  getHolidays(
+    @Lang() language: string,
     @Query('year') year: string,
     @Query('country') country: string,
   ) {
@@ -46,11 +48,12 @@ export class CalendarsController {
       );
     }
 
-    return this.holidaysService.getPublicHolidays(y, countryCode);
+    return this.optimizerService.getHolidays(y, countryCode, language);
   }
 
   @Get('optimize')
   optimize(
+    @Lang() language: string,
     @Query('year', ParseIntPipe) year: number,
     @Query('country') country: string,
     @Query('days', ParseIntPipe) days: number,
@@ -69,11 +72,17 @@ export class CalendarsController {
       country.toUpperCase(),
       days,
       strategy,
+      language,
     );
   }
 
   @Get('strategies')
   strategies() {
     return this.optimizerService.getStrategies();
+  }
+
+  @Get('countries')
+  countries(@Lang() language: string) {
+    return this.optimizerService.getCountries(language);
   }
 }

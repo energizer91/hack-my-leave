@@ -19,6 +19,8 @@ const HOLIDAYS_TO_EXCLUDE: HolidaysTypes.HolidayType[] = [
   'observance',
 ];
 
+type Holiday = Pick<HolidaysTypes.Holiday, 'date' | 'start' | 'end' | 'name'>;
+
 @Injectable()
 export class OptimizerService {
   getOptimizedVacations(
@@ -26,9 +28,10 @@ export class OptimizerService {
     countryCode: string,
     vacationDays: number,
     strategy = STRATEGY_TYPE.OPTIMAL,
+    lang?: string,
   ) {
     // 🎯 Шаг 1: Собираем праздники
-    const holidays = this.collectHolidays(year, countryCode);
+    const holidays = this.collectHolidays(year, countryCode, lang);
 
     // 🎯 Шаг 2: Генерируем все возможные предложения по отпускам
     const allSuggestions = this.generateVacationSuggestions(holidays);
@@ -60,30 +63,33 @@ export class OptimizerService {
     };
   }
 
+  getHolidays(year: number, countryCode: string, lang?: string) {
+    return new Holidays(countryCode)
+      .getHolidays(year, lang)
+      .filter((h) => !HOLIDAYS_TO_EXCLUDE.includes(h.type))
+      .map<Holiday>(({ date, start, end, name }) => ({
+        name,
+        start,
+        end,
+        date: dayjs(date).format('YYYY-MM-DD'),
+      }));
+  }
+
   /**
    * 🎯 Собираем и фильтруем праздники для года
    */
-  private collectHolidays(year: number, countryCode: string) {
-    const countryHolidays = new Holidays(countryCode);
-
-    return countryHolidays
-      .getHolidays(year)
-      .filter((h) => !HOLIDAYS_TO_EXCLUDE.includes(h.type))
-      .filter((h) => {
-        const day = dayjs(h.date);
-        // Пропускаем выходные
-        return !(day.day() === 0 || day.day() === 6);
-      })
-      .map((h) => ({
-        ...h,
-        date: dayjs(h.date).format('YYYY-MM-DD'),
-      }));
+  private collectHolidays(year: number, countryCode: string, lang?: string) {
+    return this.getHolidays(year, countryCode, lang).filter((h) => {
+      const day = dayjs(h.date);
+      // Пропускаем выходные
+      return !(day.day() === 0 || day.day() === 6);
+    });
   }
 
   /**
    * 🎯 Генерируем ВСЕ возможные предложения по отпускам
    */
-  private generateVacationSuggestions(holidays: HolidaysTypes.Holiday[]) {
+  private generateVacationSuggestions(holidays: Holiday[]) {
     const suggestions: VacationSuggestion[] = [];
     const vacationsUsed = new Set<string>();
     const holidaysSet = new Set(
@@ -114,7 +120,7 @@ export class OptimizerService {
    * 🎯 Генерируем предложения для конкретного праздника
    */
   private generateSuggestionsForHoliday(
-    holiday: HolidaysTypes.Holiday,
+    holiday: Holiday,
     holidaysSet: Set<string>,
     vacationsUsed: Set<string>,
   ) {
@@ -178,6 +184,10 @@ export class OptimizerService {
       value: key,
       tooltip: value.description,
     }));
+  }
+
+  getCountries(lang?: string) {
+    return new Holidays().getCountries(lang);
   }
 
   // 🎯 Добавляем метод для подсчета

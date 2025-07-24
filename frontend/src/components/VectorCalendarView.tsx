@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { VacationSuggestion } from '../types/vacations';
 import type { HolidaysTypes } from 'date-holidays';
 import dayjs from 'dayjs';
-import styles from './VirtualCalendarView.module.css';
+import styles from './VectorCalendarView.module.css';
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils.ts';
 
@@ -83,7 +83,7 @@ const getTextColor = (cellType: string, isCurrentMonth: boolean) => {
   }
 };
 
-export const VirtualCalendarView = ({
+export const VectorCalendarView = ({
   year = 2025,
   suggestions = [],
   holidays = [],
@@ -208,7 +208,7 @@ export const VirtualCalendarView = ({
                 {/* Holiday summary */}
                 <text
                   x={CALENDAR_WIDTH / 2}
-                  y={35}
+                  y={38}
                   textAnchor="middle"
                   className={styles.holidayText}
                 >
@@ -219,7 +219,7 @@ export const VirtualCalendarView = ({
                 {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((weekday, i) => (
                   <text
                     key={weekday}
-                    x={i * (CELL_SIZE + CELL_HORIZONTAL_GAP) + CELL_SIZE / 2} // +10 отступ слева
+                    x={i * (CELL_SIZE + CELL_HORIZONTAL_GAP) + CELL_SIZE / 2}
                     y={HEADER_HEIGHT - 5}
                     textAnchor="middle"
                     className={styles.weekdayText}
@@ -229,10 +229,10 @@ export const VirtualCalendarView = ({
                 ))}
 
                 {/* Calendar cells */}
-                {month.days.map((day, dayIndex) => (
-                  <g key={dayIndex}>
+                {month.days.map((day, index) => (
+                  <g key={`${month.name}_${day.day}_${index}`}>
                     <rect
-                      x={day.x} // +10 отступ слева для центрирования
+                      x={day.x}
                       y={day.y}
                       width={CELL_SIZE}
                       height={CELL_SIZE}
