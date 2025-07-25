@@ -6,6 +6,7 @@ import { usePersistedCountry } from '@/hooks/usePersistentCountry.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from 'dayjs';
+import { HolidayList } from '@/components/HolidayList.tsx';
 
 export const CalendarPage = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -26,34 +27,22 @@ export const CalendarPage = () => {
 
   return (
     <>
-      <div>
-        <CountrySelector title="Holiday Calendar for" country={country} onChange={setCountry} />
-        <div className="flex items-center justify-center lg:justify-start py-4 gap-4">
-          <Button variant="outline" size="icon" onClick={handlePrevious} className="h-8 w-8">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-xl min-w-[150px] text-center font-semibold">{currentMonthYear}</h2>
-          <Button variant="outline" size="icon" onClick={handleNext} className="h-8 w-8">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+      <CountrySelector title="Holiday Calendar for" country={country} onChange={setCountry} />
+      <div className="hidden lg:flex items-center justify-center lg:justify-start py-4 gap-4">
+        <Button variant="outline" size="icon" onClick={handlePrevious} className="h-8 w-8">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <h2 className="text-xl min-w-[150px] text-center font-semibold">{currentMonthYear}</h2>
+        <Button variant="outline" size="icon" onClick={handleNext} className="h-8 w-8">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
       <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1/1 lg:flex-2/3">
+        <div className="hidden lg:block flex-1/1 lg:flex-2/3">
           <HolidayCalendar data={data} date={date} setDate={setDate} />
         </div>
         <div className="flex-1/1 lg:flex-1/3">
-          <div className="flex w-full flex-col gap-2">
-            {data.map((event) => (
-              <div
-                key={event.name}
-                className="bg-muted after:bg-primary/70 relative rounded-md p-2 pl-6 text-sm after:absolute after:inset-y-2 after:left-2 after:w-1 after:rounded-full"
-              >
-                <div className="font-medium">{event.name}</div>
-                <div className="text-muted-foreground text-xs">{event.date}</div>
-              </div>
-            ))}
-          </div>
+          <HolidayList data={data} />
         </div>
       </div>
     </>

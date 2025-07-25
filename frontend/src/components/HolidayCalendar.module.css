@@ -1,3 +1,7 @@
+:global(.rbc-calendar) {
+  background-color: var(--card);
+}
+
 :global(.rbc-off-range-bg) {
   background: none;
 }
