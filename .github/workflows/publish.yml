@@ -27,7 +27,7 @@ jobs:
       - name: Build and push backend
         run: |
           docker build -t ghcr.io/${{ github.repository }}-backend:latest -f backend.Dockerfile .
-          docker push ghcr.io/${{ github.repository }}-backend:lates
+          docker push ghcr.io/${{ github.repository }}-backend:latest
 
       - name: Build and push nginx
         run: |
