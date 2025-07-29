@@ -1,10 +1,9 @@
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import styles from './HolidayCalendar.module.css';
 import type { HolidaysTypes } from 'date-holidays';
 import { useMemo } from 'react';
 import dayjs from 'dayjs';
-
-import './HolidayCalendar.module.css';
 
 const localizer = dayjsLocalizer(dayjs);
 
@@ -37,6 +36,7 @@ export const HolidayCalendar = ({ data, date, setDate }: HolidayCalendarProps) =
     <div className="w-full space-y-4">
       <div className="h-[450px] w-full ">
         <Calendar
+          className={styles.calendar}
           localizer={localizer}
           events={events}
           startAccessor="start"

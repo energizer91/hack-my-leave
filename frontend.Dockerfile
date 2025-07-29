@@ -14,4 +14,4 @@ EXPOSE 5173
 
 WORKDIR /app/frontend
 
-CMD ["serve", "-l", "5173", "dist"]
+CMD ["serve", "-s", "-l", "5173", "dist"]
