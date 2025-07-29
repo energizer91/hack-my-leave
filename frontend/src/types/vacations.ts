@@ -12,6 +12,7 @@ export interface VacationSuggestion {
   end: string;
   name: string;
   date: string;
+  type: string;
   vacations: string[];
   score: number;
 }

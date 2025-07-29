@@ -28,7 +28,7 @@ export const CalendarPage = () => {
   return (
     <>
       <CountrySelector title="Holiday Calendar for" country={country} onChange={setCountry} />
-      <div className="hidden lg:flex items-center justify-center lg:justify-start py-4 gap-4">
+      <div className="flex items-center justify-center lg:justify-start py-4 gap-4">
         <Button variant="outline" size="icon" onClick={handlePrevious} className="h-8 w-8">
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -42,7 +42,7 @@ export const CalendarPage = () => {
           <HolidayCalendar data={data} date={date} setDate={setDate} />
         </div>
         <div className="flex-1/1 lg:flex-1/3">
-          <HolidayList data={data} />
+          <HolidayList data={data} date={date} />
         </div>
       </div>
     </>

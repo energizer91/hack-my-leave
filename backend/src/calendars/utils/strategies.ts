@@ -1,13 +1,20 @@
-import { Strategy, STRATEGY_TYPE, VacationSuggestion } from '../types';
+import {
+  SELECTION_PRIORITY,
+  Strategy,
+  STRATEGY_TYPE,
+  VacationSuggestion,
+} from '../types';
 
 /**
  * Получает все уникальные отпускные дни из списка предложений
  */
-const getTotalVacationDaysCount = (
+export const getTotalVacationDaysCount = (
   suggestions: VacationSuggestion[],
 ): number => {
   const allDays = new Set<string>();
-  suggestions.forEach((s) => s.vacations.forEach((day) => allDays.add(day)));
+  suggestions.forEach((s) =>
+    s.vacations.forEach((day) => day !== s.date && allDays.add(day)),
+  );
   return allDays.size;
 };
 
@@ -17,7 +24,7 @@ const getTotalVacationDaysCount = (
 const selectSuggestions = (
   suggestions: VacationSuggestion[],
   remainingVacationDays: number,
-  priority: Strategy['selectionPriority'],
+  priority: SELECTION_PRIORITY,
 ): { result: VacationSuggestion[]; remainingVacationDays: number } => {
   const result = suggestions.slice();
 
@@ -41,19 +48,18 @@ const selectSuggestions = (
     let removalPriority: number;
 
     switch (priority) {
-      case 'score':
+      case SELECTION_PRIORITY.SCORE:
         removalPriority = s.score;
         break;
-      case 'efficiency':
+      case SELECTION_PRIORITY.EFFICIENCY:
         removalPriority = (efficiency * s.score) / 100; // комбинированная эффективность
         break;
-      case 'duration':
+      case SELECTION_PRIORITY.DURATION:
         removalPriority = duration * (s.score / 100); // предпочтение длинным отпускам
         break;
-      case 'smart':
+      case SELECTION_PRIORITY.SMART:
         removalPriority = s.score * 0.4 + efficiency * 20 + duration * 5;
         break;
-      case 'balanced':
       default:
         removalPriority = s.score;
         break;
@@ -69,15 +75,10 @@ const selectSuggestions = (
   });
 
   // Сортируем по возрастанию приоритета удаления (худшие первыми)
-  const sorted = withMetrics.sort(
+  const sorted = withMetrics.toSorted(
     (a, b) => a.removalPriority - b.removalPriority,
   );
   let deficit = Math.abs(remainingVacationDays);
-
-  // Специальная логика для balanced стратегии
-  if (priority === 'balanced') {
-    return balancedSelection(suggestions, remainingVacationDays);
-  }
 
   // Обычное удаление по приоритету
   while (deficit > 0 && sorted.length > 0) {
@@ -90,13 +91,7 @@ const selectSuggestions = (
     }
   }
 
-  // Пересчитываем remainingVacationDays
-  const totalUsedDays = getTotalVacationDaysCount(result);
-  const originalTotalDays = getTotalVacationDaysCount(suggestions);
-  const newRemaining =
-    remainingVacationDays + (originalTotalDays - totalUsedDays);
-
-  return { result, remainingVacationDays: newRemaining };
+  return { result, remainingVacationDays: -deficit };
 };
 
 /**
@@ -125,7 +120,9 @@ const balancedSelection = (
   });
 
   // Сортируем каждый квартал по score (худшие первыми)
-  Object.values(quarters).forEach((q) => q.sort((a, b) => a.score - b.score));
+  Object.values(quarters).forEach((q) =>
+    q.toSorted((a, b) => a.score - b.score),
+  );
 
   let deficit = Math.abs(remainingVacationDays);
 
@@ -149,12 +146,7 @@ const balancedSelection = (
     if (!removed) break;
   }
 
-  const totalUsedDays = getTotalVacationDaysCount(result);
-  const originalTotalDays = getTotalVacationDaysCount(suggestions);
-  const newRemaining =
-    remainingVacationDays + (originalTotalDays - totalUsedDays);
-
-  return { result, remainingVacationDays: newRemaining };
+  return { result, remainingVacationDays: -deficit };
 };
 
 export const strategies: Record<STRATEGY_TYPE, Strategy> = {
@@ -170,10 +162,14 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.1,
       monthBalance: 0.1,
       holidayProximity: 0.1,
+      type: 0.1,
     },
-    selectionPriority: 'score',
     apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'score'),
+      selectSuggestions(
+        suggestions,
+        remainingVacationDays,
+        SELECTION_PRIORITY.SCORE,
+      ),
   },
 
   [STRATEGY_TYPE.SEASONAL]: {
@@ -187,10 +183,14 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.05,
       monthBalance: 0.1,
       holidayProximity: 0.1,
+      type: 0.1,
     },
-    selectionPriority: 'score',
     apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'score'),
+      selectSuggestions(
+        suggestions,
+        remainingVacationDays,
+        SELECTION_PRIORITY.SCORE,
+      ),
   },
 
   [STRATEGY_TYPE.AGGRESSIVE]: {
@@ -205,10 +205,14 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.1,
       monthBalance: 0.05,
       holidayProximity: 0.15,
+      type: 0.1,
     },
-    selectionPriority: 'efficiency',
     apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'efficiency'),
+      selectSuggestions(
+        suggestions,
+        remainingVacationDays,
+        SELECTION_PRIORITY.EFFICIENCY,
+      ),
   },
 
   [STRATEGY_TYPE.STRAIGHT]: {
@@ -223,8 +227,8 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.1,
       monthBalance: 0.1,
       holidayProximity: 0.1,
+      type: 0.1,
     },
-    selectionPriority: 'score',
     apply: (suggestions, remainingVacationDays) => ({
       result: suggestions,
       remainingVacationDays,
@@ -232,7 +236,7 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
   },
 
   [STRATEGY_TYPE.BALANCED]: {
-    name: 'Seasonal Balance',
+    name: 'Balance',
     description:
       'Distributes vacations evenly throughout the year for consistent rest',
     rankingWeights: {
@@ -243,10 +247,9 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.05,
       monthBalance: 0.2,
       holidayProximity: 0.1,
+      type: 0.3,
     },
-    selectionPriority: 'balanced',
-    apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'balanced'),
+    apply: balancedSelection,
   },
 
   [STRATEGY_TYPE.SMART]: {
@@ -261,10 +264,14 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       weekPosition: 0.1,
       monthBalance: 0.1,
       holidayProximity: 0.1,
+      type: 0.1,
     },
-    selectionPriority: 'smart',
     apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'smart'),
+      selectSuggestions(
+        suggestions,
+        remainingVacationDays,
+        SELECTION_PRIORITY.SMART,
+      ),
   },
   [STRATEGY_TYPE.LONG_VACATIONS]: {
     name: 'Long Vacations',
@@ -277,10 +284,14 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
       clustering: 0.2,
       weekPosition: 0.05,
       monthBalance: 0.05,
-      holidayProximity: 0.0,
+      holidayProximity: 0,
+      type: 0.1,
     },
-    selectionPriority: 'duration',
     apply: (suggestions, remainingVacationDays) =>
-      selectSuggestions(suggestions, remainingVacationDays, 'duration'),
+      selectSuggestions(
+        suggestions,
+        remainingVacationDays,
+        SELECTION_PRIORITY.DURATION,
+      ),
   },
 };

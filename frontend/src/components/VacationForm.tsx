@@ -27,15 +27,18 @@ interface VacationFormProps {
   isLoading?: boolean;
 }
 
-const values = Array.from({ length: 3 }, (_, i) => 2024 + i);
+const currentYear = dayjs().year();
+const values = Array.from({ length: 3 }, (_, i) => currentYear + i);
+const formSchema = z.object({
+  availableDays: z.number().min(1).max(365),
+  year: z
+    .number()
+    .min(values[0])
+    .max(values[values.length - 1]),
+  strategy: z.string().min(1),
+});
 
 export const VacationForm = ({ onSubmit, isLoading = false }: VacationFormProps) => {
-  const formSchema = z.object({
-    availableDays: z.number().min(1).max(365),
-    year: z.number().min(2024).max(2026),
-    strategy: z.string().min(1),
-  });
-
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: { availableDays: 24, year: dayjs().year(), strategy: '' },

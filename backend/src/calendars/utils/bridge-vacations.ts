@@ -3,7 +3,7 @@ import { VacationSuggestion } from '../types';
 
 type NormalizedVacation = Pick<
   VacationSuggestion,
-  'name' | 'date' | 'start' | 'end' | 'vacations'
+  'name' | 'date' | 'start' | 'end' | 'vacations' | 'type'
 >;
 
 export const bridgeVacations = (
@@ -23,6 +23,7 @@ export const bridgeVacations = (
       start: suggestion.start,
       end: suggestion.end,
       date: suggestion.date,
+      type: suggestion.type,
       vacations: suggestion.vacations.slice(),
     };
 

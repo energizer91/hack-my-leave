@@ -1,17 +1,32 @@
-import type { HolidaysTypes } from 'date-holidays';
+import { useMemo } from 'react';
 import dayjs from 'dayjs';
+import type { HolidaysTypes } from 'date-holidays';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 
 interface HolidayListProps {
   data?: HolidaysTypes.Holiday[];
+  date?: Date;
 }
 
-export const HolidayList = ({ data = [] }: HolidayListProps) => {
+export const HolidayList = ({ data = [], date }: HolidayListProps) => {
+  const vacationsPerMonth = useMemo(
+    () => data.filter((d) => dayjs(d.date).isSame(date, 'month')),
+    [data, date],
+  );
+
+  if (!vacationsPerMonth.length) {
+    return (
+      <Card>
+        <CardContent className="p-0 text-center font-medium">No holidays in this month</CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="p-0">
         <ul className="flex flex-col gap-2">
-          {data.map((event) => (
+          {vacationsPerMonth.map((event) => (
             <li
               key={event.name}
               className="flex items-center justify-between px-4 hover:bg-muted-foreground/5"

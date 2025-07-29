@@ -3,38 +3,34 @@ import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import minMax from 'dayjs/plugin/minMax';
-import { STRATEGY_TYPE, VacationSuggestion } from './types';
-import Holidays, { HolidaysTypes } from 'date-holidays';
+import { Holiday, STRATEGY_TYPE, VacationSuggestion } from './types';
 import { randomUUID } from 'crypto';
-import { strategies } from './utils/strategies';
+import { getTotalVacationDaysCount, strategies } from './utils/strategies';
 import { AdvancedVacationRanker } from './utils/rank-segment';
 import { bridgeVacations } from './utils/bridge-vacations';
+import { HolidaysService } from './holidays.service';
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(minMax);
 
-const HOLIDAYS_TO_EXCLUDE: HolidaysTypes.HolidayType[] = [
-  'optional',
-  'observance',
-];
-
-type Holiday = Pick<HolidaysTypes.Holiday, 'date' | 'start' | 'end' | 'name'>;
-
 @Injectable()
 export class OptimizerService {
+  constructor(private readonly holidayService: HolidaysService) {}
+
   getOptimizedVacations(
     year: number,
     countryCode: string,
     vacationDays: number,
     strategy = STRATEGY_TYPE.OPTIMAL,
+    skipPast = true,
     lang?: string,
   ) {
     // 🎯 Шаг 1: Собираем праздники
     const holidays = this.collectHolidays(year, countryCode, lang);
 
     // 🎯 Шаг 2: Генерируем все возможные предложения по отпускам
-    const allSuggestions = this.generateVacationSuggestions(holidays);
+    const allSuggestions = this.generateVacationSuggestions(holidays, skipPast);
 
     // 🎯 Шаг 3: Применяем стратегию для выбора оптимальных
     const selectedStrategy = strategies[strategy];
@@ -49,7 +45,7 @@ export class OptimizerService {
     // Применяем стратегию
     const { result, remainingVacationDays } = selectedStrategy.apply(
       rankedSuggestions,
-      vacationDays - this.getTotalVacationDaysCount(rankedSuggestions),
+      vacationDays - getTotalVacationDaysCount(rankedSuggestions),
     );
 
     // Бриджим отпуска
@@ -58,45 +54,39 @@ export class OptimizerService {
 
     return {
       suggestions: bridgedResult,
-      holidays, // 📊 Возвращаем все праздники для справки
+      holidays,
       remainingVacationDays: bridgedRemaining,
     };
-  }
-
-  getHolidays(year: number, countryCode: string, lang?: string) {
-    return new Holidays(countryCode)
-      .getHolidays(year, lang)
-      .filter((h) => !HOLIDAYS_TO_EXCLUDE.includes(h.type))
-      .map<Holiday>(({ date, start, end, name }) => ({
-        name,
-        start,
-        end,
-        date: dayjs(date).format('YYYY-MM-DD'),
-      }));
   }
 
   /**
    * 🎯 Собираем и фильтруем праздники для года
    */
-  private collectHolidays(year: number, countryCode: string, lang?: string) {
-    return this.getHolidays(year, countryCode, lang).filter((h) => {
-      const day = dayjs(h.date);
-      // Пропускаем выходные
-      return !(day.day() === 0 || day.day() === 6);
-    });
+  public collectHolidays(year: number, countryCode: string, lang?: string) {
+    return this.holidayService
+      .getHolidays(year, countryCode, lang)
+      .filter((h) => {
+        const day = dayjs(h.date);
+        // Пропускаем выходные
+        return !(day.day() === 0 || day.day() === 6);
+      });
   }
 
   /**
    * 🎯 Генерируем ВСЕ возможные предложения по отпускам
    */
-  private generateVacationSuggestions(holidays: Holiday[]) {
+  private generateVacationSuggestions(holidays: Holiday[], skipCurrent = true) {
     const suggestions: VacationSuggestion[] = [];
     const vacationsUsed = new Set<string>();
+    const today = dayjs();
     const holidaysSet = new Set(
       holidays.map((h) => dayjs(h.date).format('YYYY-MM-DD')),
     );
+    const actualHolidays = skipCurrent
+      ? holidays.filter((h) => dayjs(h.date).isSameOrAfter(today, 'day'))
+      : holidays;
 
-    for (const holiday of holidays) {
+    for (const holiday of actualHolidays) {
       const holidaySuggestions = this.generateSuggestionsForHoliday(
         holiday,
         holidaysSet,
@@ -105,7 +95,6 @@ export class OptimizerService {
 
       suggestions.push(...holidaySuggestions);
 
-      // Помечаем использованные дни отпуска
       holidaySuggestions.forEach((suggestion) => {
         suggestion.vacations.forEach((vacation) => {
           vacationsUsed.add(vacation);
@@ -126,26 +115,19 @@ export class OptimizerService {
   ) {
     const day = dayjs(holiday.date);
     const suggestions: VacationSuggestion[] = [];
-
-    // Рассчитываем дни до выходных
     const left = day.diff(day.startOf('week'), 'days') - 1; // -sunday
     const right = day.endOf('week').diff(day, 'days') - 1; // -saturday
-
-    // Возможные отпуска слева (до праздника)
     const possibleVacationsLeft = Array.from({ length: left })
       .map((_, d) => day.startOf('week').add(d + 1, 'days'))
       .filter((d) => d.isSameOrAfter(day.startOf('year'), 'days'))
       .filter((d) => !vacationsUsed.has(d.format('YYYY-MM-DD')))
       .filter((d) => !holidaysSet.has(d.format('YYYY-MM-DD')));
-
-    // Возможные отпуска справа (после праздника)
     const possibleVacationsRight = Array.from({ length: right })
       .map((_, d) => day.add(d + 1, 'days'))
       .filter((d) => d.isSameOrBefore(day.endOf('year'), 'days'))
       .filter((d) => !vacationsUsed.has(d.format('YYYY-MM-DD')))
       .filter((d) => !holidaysSet.has(d.format('YYYY-MM-DD')));
 
-    // Создаем предложения
     const vacationCandidates: dayjs.Dayjs[][] = [];
 
     if (possibleVacationsLeft.length) {
@@ -156,11 +138,11 @@ export class OptimizerService {
       vacationCandidates.push(possibleVacationsRight);
     }
 
-    // Формируем финальные предложения
     vacationCandidates.forEach((vacationSegment) => {
       const suggestion: VacationSuggestion = {
         id: randomUUID(),
         name: holiday.name,
+        type: holiday.type,
         date: dayjs(holiday.date).format('YYYY-MM-DD'),
         start: dayjs
           .min([holiday.date, ...vacationSegment].map(dayjs))!
@@ -169,7 +151,7 @@ export class OptimizerService {
           .max([holiday.date, ...vacationSegment].map(dayjs))!
           .format('YYYY-MM-DD'),
         vacations: vacationSegment.map((d) => d.format('YYYY-MM-DD')),
-        score: 0, // Будет проставлен позже через ranker
+        score: 0,
       };
 
       suggestions.push(suggestion);
@@ -184,16 +166,5 @@ export class OptimizerService {
       value: key,
       tooltip: value.description,
     }));
-  }
-
-  getCountries(lang?: string) {
-    return new Holidays().getCountries(lang);
-  }
-
-  // 🎯 Добавляем метод для подсчета
-  private getTotalVacationDaysCount(suggestions: VacationSuggestion[]): number {
-    const allDays = new Set<string>();
-    suggestions.forEach((s) => s.vacations.forEach((day) => allDays.add(day)));
-    return allDays.size;
   }
 }

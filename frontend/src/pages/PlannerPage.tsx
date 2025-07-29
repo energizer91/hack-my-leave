@@ -6,11 +6,16 @@ import { ResultBlock } from '../components/ResultBlock';
 import { usePersistedCountry } from '@/hooks/usePersistentCountry.ts';
 import { CountrySelector } from '@/components/CountrySelector.tsx';
 import { toast } from 'sonner';
+import { OptimizeAlert } from '@/components/OptimizeAlert.tsx';
+
+const today = new Date();
 
 export const PlannerPage = () => {
   const [params, setParams] = useState<VacationFormData | null>(null);
   const [country, setCountry] = usePersistedCountry();
-  const { data, isLoading, error } = useCalendar(params, country);
+  const [showAll, setShowAll] = useState(false);
+  const { data, isLoading, error } = useCalendar(params, country, !showAll);
+  const isCurrentYear = params?.year === today.getFullYear();
 
   useEffect(() => {
     error &&
@@ -30,7 +35,8 @@ export const PlannerPage = () => {
         data={data}
         availableDays={params?.availableDays}
       />
-      <ResultBlock data={data} year={params?.year} />
+      <OptimizeAlert onToggle={setShowAll} showAll={showAll} show={isCurrentYear} />
+      <ResultBlock data={data} year={params?.year} skipPast={!showAll} />
     </>
   );
 };

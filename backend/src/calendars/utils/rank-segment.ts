@@ -1,18 +1,9 @@
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
-import { VacationSuggestion } from '../types';
+import { RankingWeights, VacationSuggestion } from '../types';
+import { HolidaysTypes } from 'date-holidays';
 
 dayjs.extend(weekOfYear);
-
-interface RankingWeights {
-  efficiency: number; // соотношение выходных к отпускным дням
-  duration: number; // длительность отпуска
-  seasonality: number; // сезонность (лето/зима)
-  clustering: number; // компактность дат
-  weekPosition: number; // позиция в неделе
-  monthBalance: number; // равномерность по месяцам
-  holidayProximity: number; // близость к праздникам
-}
 
 const DEFAULT_WEIGHTS: RankingWeights = {
   efficiency: 0.25,
@@ -22,6 +13,7 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   weekPosition: 0.1,
   monthBalance: 0.1,
   holidayProximity: 0.1,
+  type: 0.5,
 };
 
 export class AdvancedVacationRanker {
@@ -35,7 +27,7 @@ export class AdvancedVacationRanker {
     const endDate = dayjs(suggestion.end);
     const vacationDays = suggestion.vacations.map((d) => dayjs(d));
 
-    const scores = {
+    const scores: RankingWeights = {
       efficiency: this.calculateEfficiencyScore(suggestion),
       duration: this.calculateDurationScore(startDate, endDate),
       seasonality: this.calculateSeasonalityScore(startDate, endDate),
@@ -43,16 +35,32 @@ export class AdvancedVacationRanker {
       weekPosition: this.calculateWeekPositionScore(startDate, endDate),
       monthBalance: this.calculateMonthBalanceScore(startDate),
       holidayProximity: this.calculateHolidayProximityScore(suggestion),
+      type: this.calculateTypeScore(suggestion.type),
     };
 
     // Взвешенная сумма всех факторов
     const totalScore = Object.entries(scores).reduce(
-      (sum, [key, score]) =>
-        sum + score * this.weights[key as keyof RankingWeights],
+      (sum, [key, score]) => sum + score * this.weights[key],
       0,
     );
 
     return Math.round(totalScore * 100) / 100; // округление до 2 знаков
+  }
+
+  /**
+   * Тип: отдавать предпочтение праздникам с отпусками, однако учитывать влияние необязательных
+   */
+  private calculateTypeScore(type: HolidaysTypes.HolidayType) {
+    switch (type) {
+      case 'public':
+      case 'bank':
+      case 'school':
+        return 100;
+      case 'observance':
+      case 'optional':
+      default:
+        return 0;
+    }
   }
 
   /**

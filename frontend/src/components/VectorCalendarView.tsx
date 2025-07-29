@@ -7,14 +7,15 @@ import styles from './VectorCalendarView.module.css';
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils.ts';
 
-interface GridSVGCalendarProps {
+interface VectorCalendarViewProps {
   year?: number;
   suggestions?: VacationSuggestion[];
   holidays?: HolidaysTypes.Holiday[];
+  skipPast?: boolean;
 }
 
 // @ts-expect-error wtf
-enum HOLIDAY_TYPE {
+enum VACATION_TYPE {
   HOLIDAY,
   VACATION_WEEKEND,
   VACATION_WEEKDAY,
@@ -23,17 +24,21 @@ enum HOLIDAY_TYPE {
 
 interface TooltipInfo {
   name: string;
-  type: HOLIDAY_TYPE;
+  holiday?: HolidaysTypes.HolidayType;
+  type?: VACATION_TYPE;
 }
 
-// Константы для фиксированного календаря 300px
-const CELL_SIZE = 38; // Увеличиваем для лучшей читаемости
-const CALENDAR_WIDTH = CELL_SIZE * 7;
+const ROW_COUNT = 6;
+const COLUMN_COUNT = 7;
+const HEADER_HEIGHT = 70;
+const CELL_SIZE = 38;
 const CELL_HORIZONTAL_GAP = 0;
 const CELL_VERTICAL_GAP = 8;
-const HEADER_HEIGHT = 70;
-// Фиксированные размеры каждого месяца - ровно 300px
-const monthHeight = 6 * (CELL_SIZE + CELL_VERTICAL_GAP) + HEADER_HEIGHT + 10; // +10 для отступов
+const CELL_BORDER_RADIUS = 0;
+const CALENDAR_WIDTH = CELL_SIZE * COLUMN_COUNT + CELL_HORIZONTAL_GAP * (COLUMN_COUNT - 1);
+const CALENDAR_HEIGHT = ROW_COUNT * (CELL_SIZE + CELL_VERTICAL_GAP) + HEADER_HEIGHT;
+
+const months = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 const formatHolidaysText = (monthHolidays: HolidaysTypes.Holiday[]) => {
   if (monthHolidays.length === 0) return 'No holidays';
@@ -44,15 +49,30 @@ const formatHolidaysText = (monthHolidays: HolidaysTypes.Holiday[]) => {
   return `${monthHolidays[0].name} and ${monthHolidays.length - 1} more holidays`;
 };
 
-const getTooltipTypeText = (type: HOLIDAY_TYPE) => {
-  switch (type) {
-    case HOLIDAY_TYPE.HOLIDAY:
-      return 'Holiday';
-    case HOLIDAY_TYPE.VACATION_WEEKDAY:
+const getHolidayTypeText = (holidayType: HolidaysTypes.HolidayType) => {
+  switch (holidayType) {
+    case 'public':
+      return 'Public holiday';
+    case 'bank':
+      return 'Bank holiday';
+    case 'school':
+      return 'School holiday';
+    case 'optional':
+      return 'Optional holiday';
+    case 'observance':
+      return 'Observance holiday';
+  }
+};
+
+const getTooltipTypeText = (info: TooltipInfo) => {
+  switch (info.type) {
+    case VACATION_TYPE.HOLIDAY:
+      return getHolidayTypeText(info.holiday!);
+    case VACATION_TYPE.VACATION_WEEKDAY:
       return 'Vacation day';
-    case HOLIDAY_TYPE.VACATION_WEEKEND:
+    case VACATION_TYPE.VACATION_WEEKEND:
       return 'Vacation weekend';
-    case HOLIDAY_TYPE.EXTENDED_WEEKEND:
+    case VACATION_TYPE.EXTENDED_WEEKEND:
       return 'Extended weekend';
     default:
       return '';
@@ -61,12 +81,16 @@ const getTooltipTypeText = (type: HOLIDAY_TYPE) => {
 
 const getCellColor = (cellType: string) => {
   switch (cellType) {
+    case 'disabled':
+      return 'var(--color-gray-100)';
     case 'holiday':
       return 'var(--color-red-200)';
     case 'vacation-weekday':
       return 'var(--color-violet-200)';
     case 'vacation-weekend':
       return 'var(--color-lime-200)';
+    case 'today':
+      return 'var(--color-blue-100)';
     default:
       return '#ffffff';
   }
@@ -75,19 +99,17 @@ const getCellColor = (cellType: string) => {
 const getTextColor = (cellType: string, isCurrentMonth: boolean) => {
   if (!isCurrentMonth) return '#9ca3af';
 
-  switch (cellType) {
-    case 'holiday':
-      return 'var(--color-red-700)';
-    default:
-      return '#374151';
-  }
+  if (cellType === 'holiday') return 'var(--color-red-700)';
+
+  return '#374151';
 };
 
 export const VectorCalendarView = ({
   year = 2025,
   suggestions = [],
   holidays = [],
-}: GridSVGCalendarProps) => {
+  skipPast = false,
+}: VectorCalendarViewProps) => {
   const [tooltip, setTooltip] = useState<{
     visible: boolean;
     content: TooltipInfo | null;
@@ -102,6 +124,7 @@ export const VectorCalendarView = ({
 
   // Предвычисляем все данные один раз
   const calendarData = useMemo(() => {
+    const today = dayjs();
     const holidayMap = new Map<string, HolidaysTypes.Holiday>();
     holidays.forEach((holiday) => {
       const key = dayjs(holiday.date).format('YYYY-MM-DD');
@@ -117,18 +140,20 @@ export const VectorCalendarView = ({
     });
 
     return Array.from({ length: 12 }, (_, monthIndex) => {
-      const monthStart = dayjs().year(year).month(monthIndex).startOf('month');
+      const monthStart = today.year(year).month(monthIndex).startOf('month');
       const startOfWeek = monthStart.startOf('week').add(1, 'day');
 
       const days = [];
       let current = startOfWeek;
 
-      for (let i = 0; i < 42; i++) {
+      for (let i = 0; i < ROW_COUNT * COLUMN_COUNT; i++) {
         const dateKey = current.format('YYYY-MM-DD');
         const isCurrentMonth = current.month() === monthIndex;
         const isWeekend = current.day() === 0 || current.day() === 6;
         const holiday = holidayMap.get(dateKey);
         const vacation = vacationMap.get(dateKey);
+        const disabled = current.isBefore(today, 'day');
+        const isToday = current.isSame(today, 'day');
 
         let cellType = 'normal';
         let tooltipInfo: TooltipInfo | null = null;
@@ -137,13 +162,21 @@ export const VectorCalendarView = ({
           cellType = 'holiday';
           tooltipInfo = {
             name: holiday.name,
-            type: vacation ? HOLIDAY_TYPE.EXTENDED_WEEKEND : HOLIDAY_TYPE.HOLIDAY,
+            holiday: holiday.type,
+            type: vacation ? VACATION_TYPE.EXTENDED_WEEKEND : VACATION_TYPE.HOLIDAY,
           };
+        } else if (disabled && skipPast) {
+          cellType = 'disabled';
         } else if (vacation) {
           cellType = isWeekend ? 'vacation-weekend' : 'vacation-weekday';
           tooltipInfo = {
             name: vacation.name,
-            type: isWeekend ? HOLIDAY_TYPE.VACATION_WEEKEND : HOLIDAY_TYPE.VACATION_WEEKDAY,
+            type: isWeekend ? VACATION_TYPE.VACATION_WEEKEND : VACATION_TYPE.VACATION_WEEKDAY,
+          };
+        } else if (isToday) {
+          cellType = 'today';
+          tooltipInfo = {
+            name: 'Today',
           };
         } else if (isWeekend) {
           cellType = 'weekend';
@@ -168,7 +201,7 @@ export const VectorCalendarView = ({
         holidays: holidays.filter((h) => dayjs(h.date).month() === monthIndex),
       };
     });
-  }, [year, holidays, suggestions]);
+  }, [year, holidays, suggestions, skipPast]);
 
   const handleCellMouseEnter = useCallback((event: MouseEvent, tooltipInfo: TooltipInfo) => {
     const rect = (event.target as SVGElement).getBoundingClientRect();
@@ -192,9 +225,9 @@ export const VectorCalendarView = ({
             <CardContent className="p-3">
               <svg
                 width={CALENDAR_WIDTH}
-                height={monthHeight}
+                height={CALENDAR_HEIGHT}
                 className={styles.calendarSvg}
-                viewBox={`0 0 ${CALENDAR_WIDTH} ${monthHeight}`}
+                viewBox={`0 0 ${CALENDAR_WIDTH} ${CALENDAR_HEIGHT}`}
               >
                 <text
                   x={CALENDAR_WIDTH / 2}
@@ -205,7 +238,6 @@ export const VectorCalendarView = ({
                   {month.name} {year}
                 </text>
 
-                {/* Holiday summary */}
                 <text
                   x={CALENDAR_WIDTH / 2}
                   y={38}
@@ -215,12 +247,11 @@ export const VectorCalendarView = ({
                   {formatHolidaysText(month.holidays)}
                 </text>
 
-                {/* Weekday headers */}
-                {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((weekday, i) => (
+                {months.map((weekday, i) => (
                   <text
                     key={weekday}
                     x={i * (CELL_SIZE + CELL_HORIZONTAL_GAP) + CELL_SIZE / 2}
-                    y={HEADER_HEIGHT - 5}
+                    y={HEADER_HEIGHT - 7}
                     textAnchor="middle"
                     className={styles.weekdayText}
                   >
@@ -228,7 +259,6 @@ export const VectorCalendarView = ({
                   </text>
                 ))}
 
-                {/* Calendar cells */}
                 {month.days.map((day, index) => (
                   <g key={`${month.name}_${day.day}_${index}`}>
                     <rect
@@ -238,6 +268,7 @@ export const VectorCalendarView = ({
                       height={CELL_SIZE}
                       fill={getCellColor(day.cellType)}
                       strokeWidth="1"
+                      rx={CELL_BORDER_RADIUS}
                       className={cn(
                         styles.calendarCell,
                         day.tooltipInfo ? styles.calendarCellPointer : styles.calendarCellDefault,
@@ -250,7 +281,7 @@ export const VectorCalendarView = ({
                       onMouseLeave={day.tooltipInfo ? handleMouseLeave : undefined}
                     />
                     <text
-                      x={day.x + CELL_SIZE / 2} // +10 отступ слева
+                      x={day.x + CELL_SIZE / 2}
                       y={day.y + CELL_SIZE / 2 + 5}
                       textAnchor="middle"
                       className={`${styles.dayText} ${styles.dayTextNoPointer}`}
@@ -266,19 +297,20 @@ export const VectorCalendarView = ({
         ))}
       </div>
 
-      {/* Portal tooltip */}
       {tooltip.visible &&
         tooltip.content &&
         createPortal(
           <div
             className={styles.tooltip}
             style={{
-              left: tooltip.x - 50, // смещаем влево на половину ширины тултипа (~100px)
-              top: tooltip.y - 60, // поднимаем выше ячейки
+              left: tooltip.x - 50,
+              top: tooltip.y - 60,
             }}
           >
             <p className={styles.tooltipTitle}>{tooltip.content.name}</p>
-            <p className={styles.tooltipType}>{getTooltipTypeText(tooltip.content.type)}</p>
+            {tooltip.content.type !== undefined && (
+              <p className={styles.tooltipType}>{getTooltipTypeText(tooltip.content)}</p>
+            )}
           </div>,
           document.body,
         )}

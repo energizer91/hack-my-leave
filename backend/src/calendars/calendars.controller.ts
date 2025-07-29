@@ -7,12 +7,15 @@ import {
   HttpException,
   HttpStatus,
   ParseIntPipe,
+  ParseBoolPipe,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { CalendarsService } from './calendars.service';
 import { HolidaysService } from './holidays.service';
 import { OptimizerService } from './optimizer.service';
 import { STRATEGY_TYPE } from './types';
 import { Lang } from 'src/common/lang.decorator';
+import { HolidaysTypes } from 'date-holidays';
 
 @Controller('calendars')
 export class CalendarsController {
@@ -48,7 +51,9 @@ export class CalendarsController {
       );
     }
 
-    return this.optimizerService.getHolidays(y, countryCode, language);
+    const excluded = ['optional', 'observance'] as HolidaysTypes.HolidayType[];
+
+    return this.holidaysService.getHolidays(y, countryCode, language, excluded);
   }
 
   @Get('optimize')
@@ -57,7 +62,10 @@ export class CalendarsController {
     @Query('year', ParseIntPipe) year: number,
     @Query('country') country: string,
     @Query('days', ParseIntPipe) days: number,
-    @Query('strategy') strategy = STRATEGY_TYPE.OPTIMAL,
+    @Query('skip_past', new ParseBoolPipe({ optional: true }))
+    skipPast = true,
+    @Query('strategy', new ParseEnumPipe(STRATEGY_TYPE, { optional: true }))
+    strategy = STRATEGY_TYPE.OPTIMAL,
   ) {
     if (!country) {
       throw new HttpException('Missing country code', HttpStatus.BAD_REQUEST);
@@ -72,6 +80,7 @@ export class CalendarsController {
       country.toUpperCase(),
       days,
       strategy,
+      skipPast,
       language,
     );
   }
@@ -83,6 +92,6 @@ export class CalendarsController {
 
   @Get('countries')
   countries(@Lang() language: string) {
-    return this.optimizerService.getCountries(language);
+    return this.holidaysService.getCountries(language);
   }
 }

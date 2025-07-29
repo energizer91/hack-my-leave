@@ -1,23 +1,9 @@
-export enum HOLIDAY_TYPES {
-  PUBLIC = 'Public',
-  BANK = 'Bank', // Bank holiday, banks and offices are closed
-  SCHOOL = 'School', // School holiday, schools are closed
-  AUTHORITIES = 'Authorities', // Authorities are closed
-  OPTIONAL = 'Optional', // The majority of people take a day off
-  OBSERVANCE = 'Observance', // Optional festivity, no paid day off
-}
+import { HolidaysTypes } from 'date-holidays';
 
-export interface Holiday {
-  date: string;
-  localName: string;
-  name: string;
-  countryCode: string;
-  fixed: boolean;
-  global: boolean;
-  counties: string[] | null;
-  launchYear: number | null;
-  types: HOLIDAY_TYPES[];
-}
+export type Holiday = Pick<
+  HolidaysTypes.Holiday,
+  'date' | 'start' | 'end' | 'name' | 'type'
+>;
 
 export interface VacationSuggestion {
   id: string;
@@ -25,6 +11,7 @@ export interface VacationSuggestion {
   end: string;
   date: string;
   name: string;
+  type: HolidaysTypes.HolidayType;
   vacations: string[];
   score: number;
 }
@@ -45,21 +32,37 @@ export enum STRATEGY_TYPE {
 }
 
 // Интерфейс для весов ранжирования
-interface RankingWeights {
+export interface RankingWeights {
+  // соотношение выходных к отпускным дням
   efficiency: number;
+  // длительность отпуска
   duration: number;
+  // сезонность (лето/зима)
   seasonality: number;
+  // компактность дат
   clustering: number;
+  // позиция в неделе
   weekPosition: number;
+  // равномерность по месяцам
   monthBalance: number;
+  // близость к праздникам
   holidayProximity: number;
+  // тип праздника
+  type: number;
+}
+
+export enum SELECTION_PRIORITY {
+  SCORE,
+  EFFICIENCY,
+  DURATION,
+  BALANCED,
+  SMART,
 }
 
 export interface Strategy {
   name: string;
   description: string;
   rankingWeights: RankingWeights;
-  selectionPriority: 'score' | 'efficiency' | 'duration' | 'balanced' | 'smart';
   apply: (
     suggestions: VacationSuggestion[],
     vacationDays: number,

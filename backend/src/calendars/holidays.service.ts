@@ -1,29 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { Holiday, HOLIDAY_TYPES } from './types';
+import { Holiday } from './types';
+import Holidays, { HolidaysTypes } from 'date-holidays';
+import dayjs from 'dayjs';
+
+const HOLIDAYS_TO_EXCLUDE: HolidaysTypes.HolidayType[] = [
+  // 'optional',
+  'observance',
+];
 
 @Injectable()
 export class HolidaysService {
-  async getPublicHolidays(
+  getHolidays(
     year: number,
-    country: string,
-    types = [
-      HOLIDAY_TYPES.PUBLIC,
-      HOLIDAY_TYPES.BANK,
-      HOLIDAY_TYPES.SCHOOL,
-      HOLIDAY_TYPES.AUTHORITIES,
-    ],
-  ): Promise<Holiday[]> {
-    const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`;
-    const response = await fetch(url);
+    countryCode: string,
+    lang?: string,
+    exclude = HOLIDAYS_TO_EXCLUDE,
+  ) {
+    return new Holidays(countryCode)
+      .getHolidays(year, lang)
+      .filter((h) => !exclude.includes(h.type))
+      .map<Holiday>(({ date, start, end, name, type }) => ({
+        name,
+        start,
+        end,
+        type,
+        date: dayjs(date).format('YYYY-MM-DD'),
+      }));
+  }
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch holidays: ${response.status}`);
-    }
-
-    const data: Holiday[] = await response.json();
-
-    return data.filter((h) =>
-      h.types.some((t) => types.includes(t as HOLIDAY_TYPES)),
-    );
+  getCountries(lang?: string) {
+    return new Holidays().getCountries(lang);
   }
 }

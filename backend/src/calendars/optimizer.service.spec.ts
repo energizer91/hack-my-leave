@@ -1,74 +1,62 @@
 import { OptimizerService } from './optimizer.service';
 import { HolidaysService } from './holidays.service';
-import dayjs from 'dayjs';
+import { Test } from '@nestjs/testing';
+import { STRATEGY_TYPE } from './types';
 
 describe('OptimizerService', () => {
-  let optimizerService: OptimizerService;
+  let service: OptimizerService;
   let holidaysService: HolidaysService;
 
-  beforeEach(() => {
-    holidaysService = {
-      getPublicHolidays: jest.fn(),
-    } as any;
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        OptimizerService,
+        {
+          provide: HolidaysService,
+          useValue: {
+            getHolidays: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
 
-    optimizerService = new OptimizerService(holidaysService);
+    service = module.get(OptimizerService);
+    holidaysService = module.get(HolidaysService);
   });
 
-  it('should skip holidays that fall on weekends', async () => {
-    (holidaysService.getPublicHolidays as jest.Mock).mockResolvedValue([
-      { date: '2025-01-05' }, // Sunday
-    ]);
+  describe('collectHolidays', () => {
+    it('filters out holidays that fall on weekends', () => {
+      const mockHolidays = [
+        { date: '2025-05-01', name: 'Thursday Holiday' }, // Thursday
+        { date: '2025-05-03', name: 'Saturday Holiday' }, // Saturday
+        { date: '2025-05-04', name: 'Sunday Holiday' }, // Sunday
+      ];
+      (holidaysService.getHolidays as jest.Mock).mockReturnValue(mockHolidays);
 
-    const result = await optimizerService.getOptimizedVacations(2025, 'SE', 5);
-    expect(result.suggestions).toHaveLength(0);
-    expect(result.remainingVacationDays).toBe(5);
-  });
-
-  it('should suggest vacation bridging to weekend', async () => {
-    (holidaysService.getPublicHolidays as jest.Mock).mockResolvedValue([
-      { date: '2025-01-01' }, // Wednesday
-    ]);
-
-    const result = await optimizerService.getOptimizedVacations(2025, 'SE', 5);
-    expect(result.suggestions).toHaveLength(1);
-    expect(result.suggestions[0]).toEqual({
-      start: '2025-01-01',
-      end: '2025-01-03',
-      vacationUsed: ['2025-01-02', '2025-01-03'],
+      const result = service.collectHolidays(2025, 'SE');
+      expect(result).toEqual([
+        { date: '2025-05-01', name: 'Thursday Holiday' },
+      ]);
     });
-    expect(result.remainingVacationDays).toBe(3);
   });
 
-  it('should skip holidays that fall on Friday', async () => {
-    (holidaysService.getPublicHolidays as jest.Mock).mockResolvedValue([
-      { date: '2025-01-03' }, // Friday
-    ]);
+  describe('getOptimizedVacations', () => {
+    it('generates optimized vacations from holiday input', () => {
+      (holidaysService.getHolidays as jest.Mock).mockReturnValue([
+        { date: '2025-05-01', name: 'Labour Day' }, // Thursday
+      ]);
 
-    const result = await optimizerService.getOptimizedVacations(2025, 'SE', 5);
-    expect(result.suggestions).toHaveLength(0);
-    expect(result.remainingVacationDays).toBe(5);
-  });
+      const res = service.getOptimizedVacations(
+        2025,
+        'SE',
+        3,
+        STRATEGY_TYPE.OPTIMAL,
+        false,
+      );
 
-  it('should not suggest overlapping vacation periods', async () => {
-    (holidaysService.getPublicHolidays as jest.Mock).mockResolvedValue([
-      { date: '2025-01-01' }, // Wednesday
-      { date: '2025-01-02' }, // Thursday (overlaps with prior suggestion)
-    ]);
-
-    const result = await optimizerService.getOptimizedVacations(2025, 'SE', 10);
-    expect(result.suggestions).toHaveLength(1);
-    expect(result.suggestions[0].start).toBe('2025-01-01');
-    expect(result.remainingVacationDays).toBeLessThan(10);
-  });
-
-  it('should respect year boundary and not suggest vacations into next year', async () => {
-    (holidaysService.getPublicHolidays as jest.Mock).mockResolvedValue([
-      { date: '2025-12-30' }, // Tuesday
-    ]);
-
-    const result = await optimizerService.getOptimizedVacations(2025, 'SE', 10);
-    expect(result.suggestions).toHaveLength(1);
-    const used = result.suggestions[0].vacationUsed;
-    expect(used.every((d) => dayjs(d).year() === 2025)).toBe(true);
+      expect(res.holidays).toHaveLength(1);
+      expect(res.suggestions).toBeDefined();
+      expect(res.suggestions[0]).toHaveProperty('date');
+    });
   });
 });
