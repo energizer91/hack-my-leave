@@ -7,13 +7,11 @@ import { Button } from '@/components/ui/button.tsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from 'dayjs';
 import { HolidayList } from '@/components/HolidayList.tsx';
-import { CalendarPlaceholder } from '@/components/CalendarPlaceholder.tsx';
-import { Card, CardContent } from '@/components/ui/card.tsx';
 
 export const CalendarPage = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [country, setCountry] = usePersistedCountry();
-  const { isLoading, data = [] } = useVacations(date?.getFullYear(), country);
+  const { data = [] } = useVacations(date?.getFullYear(), country);
 
   const handlePrevious = () => {
     const newDate = dayjs(date).subtract(1, 'month').toDate();
@@ -44,15 +42,7 @@ export const CalendarPage = () => {
           <HolidayCalendar data={data} date={date} setDate={setDate} />
         </div>
         <div className="flex-1/1 lg:flex-1/3">
-          <Card>
-            <CardContent className="p-0">
-              {!isLoading && data.length ? (
-                <HolidayList data={data} date={date} />
-              ) : (
-                <CalendarPlaceholder isLoading={isLoading} />
-              )}
-            </CardContent>
-          </Card>
+          <HolidayList data={data} date={date} />
         </div>
       </div>
     </>

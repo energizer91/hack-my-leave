@@ -14,6 +14,18 @@ export const HolidayList = ({ data = [], date }: HolidayListProps) => {
     [data, date],
   );
 
+  if (!data.length) {
+    return (
+      <Card className="flex flex-col justify-center items-center gap-3 text-center">
+        <CardContent>
+          <h3 className="font-semibold text-xl">
+            Select a country to discover its annual holidays!
+          </h3>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!vacationsPerMonth.length) {
     return (
       <Card>
