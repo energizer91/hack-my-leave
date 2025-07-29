@@ -51,8 +51,8 @@ export const StrategySelect = ({ isLoading, control, setValue }: StrategySelectP
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {data.map(({ label, value, tooltip }) => (
-                <SelectItem key={value} value={value} tooltip={tooltip}>
+              {data.map(({ label, value }) => (
+                <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>
               ))}
