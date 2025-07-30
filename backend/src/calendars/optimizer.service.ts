@@ -64,7 +64,7 @@ export class OptimizerService {
    */
   public collectHolidays(year: number, countryCode: string, lang?: string) {
     return this.holidayService
-      .getHolidays(year, countryCode, lang)
+      .getHolidays(year, countryCode, lang, [])
       .filter((h) => {
         const day = dayjs(h.date);
         // Пропускаем выходные
@@ -79,12 +79,14 @@ export class OptimizerService {
     const suggestions: VacationSuggestion[] = [];
     const vacationsUsed = new Set<string>();
     const today = dayjs();
+    const actualHolidays = (
+      skipCurrent
+        ? holidays.filter((h) => dayjs(h.date).isSameOrAfter(today, 'day'))
+        : holidays
+    ).filter((h) => !['optional', 'observance'].includes(h.type));
     const holidaysSet = new Set(
-      holidays.map((h) => dayjs(h.date).format('YYYY-MM-DD')),
+      actualHolidays.map((h) => dayjs(h.date).format('YYYY-MM-DD')),
     );
-    const actualHolidays = skipCurrent
-      ? holidays.filter((h) => dayjs(h.date).isSameOrAfter(today, 'day'))
-      : holidays;
 
     for (const holiday of actualHolidays) {
       const holidaySuggestions = this.generateSuggestionsForHoliday(
@@ -139,25 +141,45 @@ export class OptimizerService {
     }
 
     vacationCandidates.forEach((vacationSegment) => {
-      const suggestion: VacationSuggestion = {
-        id: randomUUID(),
-        name: holiday.name,
-        type: holiday.type,
-        date: dayjs(holiday.date).format('YYYY-MM-DD'),
-        start: dayjs
-          .min([holiday.date, ...vacationSegment].map(dayjs))!
-          .format('YYYY-MM-DD'),
-        end: dayjs
-          .max([holiday.date, ...vacationSegment].map(dayjs))!
-          .format('YYYY-MM-DD'),
-        vacations: vacationSegment.map((d) => d.format('YYYY-MM-DD')),
-        score: 0,
-      };
-
-      suggestions.push(suggestion);
+      suggestions.push(this.generateSuggestion(holiday, vacationSegment));
     });
 
+    // add empty vacation for better bridge calculation
+    if (!vacationCandidates.length) {
+      suggestions.push(this.generateSuggestion(holiday, []));
+    }
+
     return suggestions;
+  }
+
+  private generateSuggestion(holiday: Holiday, vacations: dayjs.Dayjs[]) {
+    const date = dayjs(holiday.date);
+    const suggestion: VacationSuggestion = {
+      id: randomUUID(),
+      name: holiday.name,
+      type: holiday.type,
+      date: dayjs(holiday.date).format('YYYY-MM-DD'),
+      start: dayjs.min([date, ...vacations]).format('YYYY-MM-DD'),
+      end: dayjs.max([date, ...vacations]).format('YYYY-MM-DD'),
+      vacations: vacations.map((d) => d.format('YYYY-MM-DD')),
+      score: 0,
+    };
+
+    // see if we can extend it to weekends
+    // TODO: possible clash to close standing vacations, need to check
+    const start = dayjs(suggestion.start);
+    const end = dayjs(suggestion.end);
+    if (start.day() === 1) {
+      // move start to saturday
+      suggestion.start = start.subtract(2, 'day').format('YYYY-MM-DD');
+    }
+
+    if (end.day() === 5) {
+      // move end to sunday
+      suggestion.end = end.add(2, 'day').format('YYYY-MM-DD');
+    }
+
+    return suggestion;
   }
 
   getStrategies() {

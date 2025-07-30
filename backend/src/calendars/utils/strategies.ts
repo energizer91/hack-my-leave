@@ -85,6 +85,11 @@ const selectSuggestions = (
     const toRemove = sorted.shift()!;
     const suggestionIndex = result.findIndex((s) => s.id === toRemove.id);
 
+    if (!result[suggestionIndex].vacations.length) {
+      // no need to delete empty segments, they won't affect a deficit
+      continue;
+    }
+
     if (suggestionIndex >= 0) {
       deficit -= result[suggestionIndex].vacations.length;
       result.splice(suggestionIndex, 1);
@@ -157,7 +162,7 @@ export const strategies: Record<STRATEGY_TYPE, Strategy> = {
     rankingWeights: {
       efficiency: 0.45,
       duration: 0.15,
-      seasonality: 0.15,
+      seasonality: 0.35,
       clustering: 0.15,
       weekPosition: 0.1,
       monthBalance: 0.1,

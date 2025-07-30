@@ -1,8 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card.tsx';
-import { VacationForm } from '@/components/VacationForm.tsx';
-import { VacationSummary } from '@/components/VacationSummary.tsx';
 import type { VacationFormData, VacationResult } from '@/types/vacations.ts';
-import { WelcomePlaceholder } from '@/components/WelcomePlaceholder.tsx';
+import { VacationForm } from './VacationForm.tsx';
+import { VacationSummary } from './VacationSummary.tsx';
+import { WelcomePlaceholder } from './WelcomePlaceholder.tsx';
 
 interface WelcomeBlockProps {
   ready?: boolean;

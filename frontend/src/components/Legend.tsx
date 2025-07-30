@@ -1,4 +1,5 @@
 import React from 'react';
+import { holidayTypes } from '@/lib/holidayTypes.ts';
 
 interface LegendItem {
   label: string;
@@ -10,11 +11,7 @@ interface LegendProps {
   items?: LegendItem[];
 }
 
-const defaultItems = [
-  { label: 'Your vacation days', color: 'var(--color-violet-200)' },
-  { label: 'Additional days', color: 'var(--color-lime-200)' },
-  { label: 'Public holidays', color: 'var(--color-red-200)' },
-];
+const defaultItems = Object.values(holidayTypes);
 
 export const Legend: React.FC<LegendProps> = ({ items = defaultItems }) => {
   return (
