@@ -15,9 +15,6 @@ export const bridgeVacations = (
   // if before or after a weekend (day === 1 || day === 5) -> add them
   // if difference between suggestions is 0 combine them
   const result = suggestions.reduce((acc, suggestion) => {
-    const firstVacation = dayjs(suggestion.start);
-    const lastVacation = dayjs(suggestion.end);
-
     const newSuggestion: NormalizedVacation = {
       name: suggestion.name,
       start: suggestion.start,
@@ -26,26 +23,6 @@ export const bridgeVacations = (
       type: suggestion.type,
       vacations: suggestion.vacations.slice(),
     };
-
-    if (firstVacation.day() === 1) {
-      // monday, add prev saturday and sunday
-      const saturday = firstVacation.subtract(2, 'day').format('YYYY-MM-DD');
-      const sunday = firstVacation.subtract(1, 'day').format('YYYY-MM-DD');
-
-      // only do that if no other vacations specified to avoid overlap
-      if (!acc.at(-1)?.vacations.includes(sunday)) {
-        newSuggestion.vacations.unshift(saturday, sunday);
-        newSuggestion.start = saturday;
-      }
-    }
-
-    if (lastVacation.day() === 5) {
-      // friday, add next saturday and sunday
-      const saturday = lastVacation.add(1, 'day').format('YYYY-MM-DD');
-      const sunday = lastVacation.add(2, 'day').format('YYYY-MM-DD');
-      newSuggestion.vacations.push(saturday, sunday);
-      newSuggestion.end = sunday;
-    }
 
     if (acc[acc.length - 1]) {
       // don't add segment which is already there

@@ -1,5 +1,5 @@
-import { Legend } from '@/components/Legend.tsx';
-import { VectorCalendarView } from '@/components/VectorCalendarView.tsx';
+import { Legend } from './Legend.tsx';
+import { VectorCalendarView } from './VectorCalendarView.tsx';
 import type { VacationResult } from '@/types/vacations.ts';
 
 interface ResultBlockProps {

@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import styles from './VectorCalendarView.module.css';
 import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils.ts';
+import { holidayTypes } from '@/lib/holidayTypes.ts';
 
 interface VectorCalendarViewProps {
   year?: number;
@@ -73,36 +74,26 @@ const getTooltipTypeText = (info: TooltipInfo) => {
     case VACATION_TYPE.VACATION_WEEKEND:
       return 'Vacation weekend';
     case VACATION_TYPE.EXTENDED_WEEKEND:
-      return 'Extended weekend';
+      return 'Extended vacation';
     default:
       return '';
   }
 };
 
 const getCellColor = (cellType: string) => {
-  switch (cellType) {
-    case 'disabled':
-      return 'var(--color-gray-100)';
-    case 'holiday':
-      return 'var(--color-red-200)';
-    case 'vacation-weekday':
-      return 'var(--color-violet-200)';
-    case 'vacation-weekend':
-      return 'var(--color-lime-200)';
-    case 'today':
-      return 'var(--color-blue-100)';
-    default:
-      return '#ffffff';
-  }
+  if (cellType === 'disabled') return 'var(--color-gray-100)';
+  if (cellType === 'today') return 'var(--color-blue-100)';
+
+  return holidayTypes[cellType]?.color ?? '#ffffff';
 };
 
 const getTextColor = (cellType: string, isCurrentMonth: boolean) => {
   if (!isCurrentMonth) return '#9ca3af';
 
-  if (cellType === 'holiday') return 'var(--color-red-700)';
-
-  return '#374151';
+  return holidayTypes[cellType]?.text ?? '#374151';
 };
+
+const OPTIONAL_HOLIDAYS = ['optional', 'observance'];
 
 export const VectorCalendarView = ({
   year = 2025,
@@ -132,10 +123,37 @@ export const VectorCalendarView = ({
     });
 
     const vacationMap = new Map<string, VacationSuggestion>();
+    const weekendMap = new Map<string, VacationSuggestion>();
     suggestions.forEach((suggestion) => {
+      const start = dayjs(suggestion.start);
+      const end = dayjs(suggestion.end);
+
+      if (start.day() === 0) {
+        // sunday, add this and prev saturday
+        weekendMap.set(suggestion.start, suggestion);
+        weekendMap.set(start.subtract(1, 'day').format('YYYY-MM-DD'), suggestion);
+      }
+
+      if (start.day() === 6) {
+        // saturday, add this and next sunday
+        weekendMap.set(suggestion.start, suggestion);
+        weekendMap.set(start.add(1, 'day').format('YYYY-MM-DD'), suggestion);
+      }
+
+      if (end.day() === 0) {
+        // sunday, add this and prev saturday
+        weekendMap.set(suggestion.end, suggestion);
+        weekendMap.set(end.subtract(1, 'day').format('YYYY-MM-DD'), suggestion);
+      }
+
+      if (end.day() === 6) {
+        // saturday, add this and next sunday
+        weekendMap.set(suggestion.end, suggestion);
+        weekendMap.set(end.add(1, 'day').format('YYYY-MM-DD'), suggestion);
+      }
+
       suggestion.vacations.forEach((vacationDate) => {
-        const key = dayjs(vacationDate).format('YYYY-MM-DD');
-        vacationMap.set(key, suggestion);
+        vacationMap.set(vacationDate, suggestion);
       });
     });
 
@@ -149,7 +167,7 @@ export const VectorCalendarView = ({
       for (let i = 0; i < ROW_COUNT * COLUMN_COUNT; i++) {
         const dateKey = current.format('YYYY-MM-DD');
         const isCurrentMonth = current.month() === monthIndex;
-        const isWeekend = current.day() === 0 || current.day() === 6;
+        const weekend = weekendMap.get(dateKey);
         const holiday = holidayMap.get(dateKey);
         const vacation = vacationMap.get(dateKey);
         const disabled = current.isBefore(today, 'day');
@@ -159,27 +177,31 @@ export const VectorCalendarView = ({
         let tooltipInfo: TooltipInfo | null = null;
 
         if (holiday) {
-          cellType = 'holiday';
+          cellType = OPTIONAL_HOLIDAYS.includes(holiday.type) ? 'optional' : 'holiday';
           tooltipInfo = {
             name: holiday.name,
             holiday: holiday.type,
             type: vacation ? VACATION_TYPE.EXTENDED_WEEKEND : VACATION_TYPE.HOLIDAY,
           };
+        } else if (weekend) {
+          cellType = 'additional';
+          tooltipInfo = {
+            name: weekend.name,
+            type: VACATION_TYPE.VACATION_WEEKEND,
+          };
         } else if (disabled && skipPast) {
           cellType = 'disabled';
         } else if (vacation) {
-          cellType = isWeekend ? 'vacation-weekend' : 'vacation-weekday';
+          cellType = 'vacation';
           tooltipInfo = {
             name: vacation.name,
-            type: isWeekend ? VACATION_TYPE.VACATION_WEEKEND : VACATION_TYPE.VACATION_WEEKDAY,
+            type: VACATION_TYPE.VACATION_WEEKDAY,
           };
         } else if (isToday) {
           cellType = 'today';
           tooltipInfo = {
             name: 'Today',
           };
-        } else if (isWeekend) {
-          cellType = 'weekend';
         }
 
         days.push({

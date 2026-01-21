@@ -11,30 +11,30 @@ interface VacationSummaryProps {
 }
 
 export const VacationSummary = ({
-  suggestions,
-  holidays,
+  suggestions = [],
+  holidays = [],
   totalVacationDays = 0,
 }: VacationSummaryProps) => {
+  const actualHolidays = holidays.filter((h) => !['optional', 'observance'].includes(h.type));
   // Calculate used vacation days
   const usedVacationDays =
-    suggestions?.reduce((total, suggestion) => {
+    suggestions.reduce((total, suggestion) => {
       const workingDays = suggestion.vacations.filter((day) => {
         const dayOfWeek = new Date(day).getDay();
-        // Исключаем выходные (0 = воскресенье, 6 = суббота)
         return dayOfWeek !== 0 && dayOfWeek !== 6;
       }).length;
       return total + workingDays;
     }, 0) ?? 0;
 
   // Calculate utilized holidays
-  const holidayDates = new Set(holidays?.map((h) => h.date));
-  const utilizedHolidays = suggestions?.filter((suggestion) =>
+  const holidayDates = new Set(actualHolidays?.map((h) => h.date));
+  const utilizedHolidays = suggestions.filter((suggestion) =>
     holidayDates.has(suggestion.date),
   ).length;
 
   // Calculate total rest days (including weekends within periods)
   const totalRestDays =
-    suggestions?.reduce((total, suggestion) => {
+    suggestions.reduce((total, suggestion) => {
       const start = new Date(suggestion.start);
       const end = new Date(suggestion.end);
       const diffTime = Math.abs(Number(end) - Number(start));
@@ -89,7 +89,7 @@ export const VacationSummary = ({
           <span className="text-sm">Holidays utilized</span>
         </div>
         <Badge variant="secondary">
-          {utilizedHolidays} of {holidays?.length}
+          {utilizedHolidays} of {actualHolidays.length}
         </Badge>
       </div>
 
